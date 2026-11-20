@@ -24,8 +24,7 @@ internal sealed unsafe class Transfer(IGameGui gameGui, IClientState clientState
     private int moved;
     private int remaining;
 
-    public bool SaddlebagReady => clientState.IsLoggedIn &&
-        (AddonReady("InventoryBuddy") || AddonReady("InventoryBuddy2"));
+    public bool SaddlebagReady => GetVisibleSaddlebag() != null;
     public bool IsRunning { get; private set; }
     public string Status { get; private set; } = "";
 
@@ -37,10 +36,18 @@ internal sealed unsafe class Transfer(IGameGui gameGui, IClientState clientState
 
     public void RequestStop() => stopRequested = true;
 
-    private bool AddonReady(string name)
+    internal AtkUnitBase* GetVisibleSaddlebag()
+    {
+        if (!clientState.IsLoggedIn)
+            return null;
+        var addon = GetVisibleAddon("InventoryBuddy");
+        return addon != null ? addon : GetVisibleAddon("InventoryBuddy2");
+    }
+
+    private AtkUnitBase* GetVisibleAddon(string name)
     {
         var addon = gameGui.GetAddonByName<AtkUnitBase>(name);
-        return addon != null && addon->IsVisible && addon->IsReady;
+        return addon != null && addon->IsVisible && addon->IsReady ? addon : null;
     }
 
     public void Update()

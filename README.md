@@ -9,8 +9,10 @@ In `/xlsettings`, add the [Solterax plugin feed](https://raw.githubusercontent.c
 ## Use
 
 1. Open the Chocobo Saddlebag with `/saddlebag`.
-2. Open Saddlebag Manager with `/saddlebagmanager`.
-3. Select **Deposit all** or **Withdraw all**, then **Start transfer**. Enable **Include premium saddlebag** if you want to process the premium tab as well.
+2. Select **Deposit All** or **Withdraw All** in the saddlebag footer.
+3. Select **Start transfer** in the confirmation window. Enable **Include premium saddlebag** if you want to process the premium tab as well.
+
+You can also open the transfer window with `/saddlebagmanager`.
 
 The plugin uses compatible stacks and empty slots in the destination. Items that cannot fit or that the game refuses to move stay in their original slots. **Stop transfer** finishes checking the current move before stopping. Closing the saddlebag also stops the transfer.
 

@@ -13,6 +13,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly ICommandManager commands;
     private readonly IFramework framework;
     private readonly Transfer transfer;
+    private readonly SaddlebagFooter footer;
     private bool windowOpen;
     private bool includePremium;
     private bool? confirmDeposit;
@@ -24,6 +25,7 @@ public sealed class Plugin : IDalamudPlugin
         this.commands = commands;
         this.framework = framework;
         transfer = new Transfer(gameGui, clientState, data);
+        footer = new SaddlebagFooter(transfer, OpenConfirmation);
 
         commands.AddHandler(Command, new CommandInfo((_, _) => OpenWindow())
         {
@@ -36,10 +38,17 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OpenWindow() => windowOpen = true;
 
+    private void OpenConfirmation(bool deposit)
+    {
+        confirmDeposit = deposit;
+        OpenWindow();
+    }
+
     private void Update(IFramework _) => transfer.Update();
 
     private void Draw()
     {
+        footer.Draw();
         if (!windowOpen)
             return;
 
@@ -84,11 +93,11 @@ public sealed class Plugin : IDalamudPlugin
                 }
                 else
                 {
-                    if (ImGui.Button("Deposit all"))
-                        confirmDeposit = true;
+                    if (ImGui.Button("Deposit All"))
+                        OpenConfirmation(true);
                     ImGui.SameLine();
-                    if (ImGui.Button("Withdraw all"))
-                        confirmDeposit = false;
+                    if (ImGui.Button("Withdraw All"))
+                        OpenConfirmation(false);
                 }
                 ImGui.EndDisabled();
             }
