@@ -26,11 +26,12 @@ internal sealed unsafe class Transfer(IGameGui gameGui, IClientState clientState
 
     public bool SaddlebagReady => GetVisibleSaddlebag() != null;
     public bool IsRunning { get; private set; }
+    public bool IsBusy => IsRunning || startRequest.HasValue;
     public string Status { get; private set; } = "";
 
     public void Start(bool deposit, bool includePremium)
     {
-        if (!IsRunning)
+        if (!IsBusy)
             startRequest = new(deposit, includePremium);
     }
 

@@ -25,7 +25,7 @@ public sealed class Plugin : IDalamudPlugin
         this.commands = commands;
         this.framework = framework;
         transfer = new Transfer(gameGui, clientState, data);
-        footer = new SaddlebagFooter(transfer, OpenConfirmation);
+        footer = new SaddlebagFooter(transfer);
 
         commands.AddHandler(Command, new CommandInfo((_, _) => OpenWindow())
         {
@@ -48,7 +48,7 @@ public sealed class Plugin : IDalamudPlugin
 
     private void Draw()
     {
-        footer.Draw();
+        footer.Draw(includePremium);
         if (!windowOpen)
             return;
 

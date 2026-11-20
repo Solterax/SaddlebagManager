@@ -5,7 +5,7 @@ using Bounds = FFXIVClientStructs.FFXIV.Common.Math.Bounds;
 
 namespace SaddlebagManager;
 
-internal sealed unsafe class SaddlebagFooter(Transfer transfer, Action<bool> openConfirmation)
+internal sealed unsafe class SaddlebagFooter(Transfer transfer)
 {
     private const uint FooterAnchorNodeId = 83;
     private const float DepositWidth = 84f;
@@ -19,7 +19,7 @@ internal sealed unsafe class SaddlebagFooter(Transfer transfer, Action<bool> ope
         ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.NoFocusOnAppearing | ImGuiWindowFlags.NoNav |
         ImGuiWindowFlags.NoBringToFrontOnFocus;
 
-    public void Draw()
+    public void Draw(bool includePremium)
     {
         var addon = transfer.GetVisibleSaddlebag();
         if (addon == null || addon->RootNode == null || !addon->RootNode->IsVisible())
@@ -76,12 +76,10 @@ internal sealed unsafe class SaddlebagFooter(Transfer transfer, Action<bool> ope
 
             ImGui.SetWindowFontScale(1f);
             ImGui.SetWindowFontScale(13f * scale / ImGui.GetFontSize());
-            ImGui.BeginDisabled(transfer.IsRunning);
-            if (ImGui.Button("Deposit All", new Vector2(DepositWidth * scale, rowSize.Y)))
-                openConfirmation(true);
+            ImGui.BeginDisabled(transfer.IsBusy);
+            DrawButton(true, includePremium, scale);
             ImGui.SameLine();
-            if (ImGui.Button("Withdraw All", new Vector2(WithdrawWidth * scale, rowSize.Y)))
-                openConfirmation(false);
+            DrawButton(false, includePremium, scale);
             ImGui.EndDisabled();
         }
         finally
@@ -89,6 +87,21 @@ internal sealed unsafe class SaddlebagFooter(Transfer transfer, Action<bool> ope
             ImGui.End();
             ImGui.PopStyleColor(4);
             ImGui.PopStyleVar(6);
+        }
+    }
+
+    private void DrawButton(bool deposit, bool includePremium, float scale)
+    {
+        var label = deposit ? "Deposit All" : "Withdraw All";
+        var width = deposit ? DepositWidth : WithdrawWidth;
+        if (ImGui.Button(label, new Vector2(width, ButtonHeight) * scale) && ImGui.GetIO().KeyCtrl)
+            transfer.Start(deposit, includePremium);
+
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+        {
+            var hint = $"Hold Ctrl and click to {label.ToLowerInvariant()}.";
+            var status = transfer.Status;
+            ImGui.SetTooltip(status.Length == 0 ? hint : $"{hint}\n{status}");
         }
     }
 }
