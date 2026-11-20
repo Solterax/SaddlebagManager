@@ -1,0 +1,25 @@
+# Saddlebag Manager
+
+Move items in bulk between your main inventory and Chocobo Saddlebag in FINAL FANTASY XIV. Requires Dalamud API 15.
+
+## Install
+
+In `/xlsettings`, add the [Solterax plugin feed](https://raw.githubusercontent.com/Solterax/DalamudPlugins/main/pluginmaster.json) under **Experimental → Custom Plugin Repositories**. Enable and save it, then install **Saddlebag Manager** from `/xlplugins`.
+
+## Use
+
+1. Open the Chocobo Saddlebag with `/saddlebag`.
+2. Open Saddlebag Manager with `/saddlebagmanager`.
+3. Select **Deposit all** or **Withdraw all**, then **Start transfer**. Enable **Include premium saddlebag** if you want to process the premium tab as well.
+
+The plugin uses compatible stacks and empty slots in the destination. Items that cannot fit or that the game refuses to move stay in their original slots. **Stop transfer** finishes checking the current move before stopping. Closing the saddlebag also stops the transfer.
+
+## Build
+
+Build with the .NET 10 SDK and a local Dalamud API 15 installation.
+
+```powershell
+dotnet build -c Release
+```
+
+Set `DALAMUD_HOME` to your Dalamud API 15 assembly directory if the SDK cannot locate it. The build produces a `latest.zip` release package under `bin/Release/SaddlebagManager`.

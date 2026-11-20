@@ -1,0 +1,115 @@
+using System.Numerics;
+using Dalamud.Bindings.ImGui;
+using Dalamud.Game.Command;
+using Dalamud.Plugin;
+using Dalamud.Plugin.Services;
+
+namespace SaddlebagManager;
+
+public sealed class Plugin : IDalamudPlugin
+{
+    private const string Command = "/saddlebagmanager";
+    private readonly IDalamudPluginInterface pluginInterface;
+    private readonly ICommandManager commands;
+    private readonly IFramework framework;
+    private readonly Transfer transfer;
+    private bool windowOpen;
+    private bool includePremium;
+    private bool? confirmDeposit;
+
+    public Plugin(IDalamudPluginInterface pluginInterface, ICommandManager commands, IFramework framework,
+        IGameGui gameGui, IClientState clientState, IDataManager data)
+    {
+        this.pluginInterface = pluginInterface;
+        this.commands = commands;
+        this.framework = framework;
+        transfer = new Transfer(gameGui, clientState, data);
+
+        commands.AddHandler(Command, new CommandInfo((_, _) => OpenWindow())
+        {
+            HelpMessage = "Open Saddlebag Manager.",
+        });
+        framework.Update += Update;
+        pluginInterface.UiBuilder.Draw += Draw;
+        pluginInterface.UiBuilder.OpenMainUi += OpenWindow;
+    }
+
+    private void OpenWindow() => windowOpen = true;
+
+    private void Update(IFramework _) => transfer.Update();
+
+    private void Draw()
+    {
+        if (!windowOpen)
+            return;
+
+        ImGui.SetNextWindowSize(new Vector2(420, 170), ImGuiCond.FirstUseEver);
+        var visible = ImGui.Begin("Saddlebag Manager", ref windowOpen, ImGuiWindowFlags.NoCollapse);
+        try
+        {
+            if (!windowOpen)
+                confirmDeposit = null;
+            if (!visible)
+                return;
+
+            var ready = transfer.SaddlebagReady;
+            if (!ready)
+            {
+                ImGui.TextWrapped("Open your Chocobo Saddlebag to start a transfer.");
+                confirmDeposit = null;
+            }
+
+            if (transfer.IsRunning)
+            {
+                if (ImGui.Button("Stop transfer"))
+                    transfer.RequestStop();
+            }
+            else
+            {
+                ImGui.BeginDisabled(!ready);
+                ImGui.Checkbox("Include premium saddlebag", ref includePremium);
+                if (confirmDeposit is bool deposit)
+                {
+                    ImGui.TextUnformatted(deposit
+                        ? "Move items from inventory to the saddlebag?"
+                        : "Move items from the saddlebag to inventory?");
+                    if (ImGui.Button("Start transfer"))
+                    {
+                        transfer.Start(deposit, includePremium);
+                        confirmDeposit = null;
+                    }
+                    ImGui.SameLine();
+                    if (ImGui.Button("Cancel"))
+                        confirmDeposit = null;
+                }
+                else
+                {
+                    if (ImGui.Button("Deposit all"))
+                        confirmDeposit = true;
+                    ImGui.SameLine();
+                    if (ImGui.Button("Withdraw all"))
+                        confirmDeposit = false;
+                }
+                ImGui.EndDisabled();
+            }
+
+            if (transfer.Status.Length > 0)
+            {
+                ImGui.Separator();
+                ImGui.TextWrapped(transfer.Status);
+            }
+        }
+        finally
+        {
+            ImGui.End();
+        }
+    }
+
+    public void Dispose()
+    {
+        pluginInterface.UiBuilder.Draw -= Draw;
+        pluginInterface.UiBuilder.OpenMainUi -= OpenWindow;
+        framework.Update -= Update;
+        commands.RemoveHandler(Command);
+    }
+}
