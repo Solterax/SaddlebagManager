@@ -8,6 +8,7 @@ namespace SaddlebagManager;
 
 internal sealed unsafe class Transfer(IGameGui gameGui, IClientState clientState, IDataManager data)
 {
+    private const byte MaterialsOrderGroup = 6;
     private static readonly InventoryType[] InventoryPages =
         [InventoryType.Inventory1, InventoryType.Inventory2, InventoryType.Inventory3, InventoryType.Inventory4];
     private static readonly InventoryType[] StandardPages = [InventoryType.SaddleBag1, InventoryType.SaddleBag2];
@@ -21,6 +22,7 @@ internal sealed unsafe class Transfer(IGameGui gameGui, IClientState clientState
     private Move? pending;
     private StartRequest? startRequest;
     private bool stopRequested;
+    private bool materialsOnly;
     private int moved;
     private int remaining;
 
@@ -29,10 +31,10 @@ internal sealed unsafe class Transfer(IGameGui gameGui, IClientState clientState
     public bool IsBusy => IsRunning || startRequest.HasValue;
     public string Status { get; private set; } = "";
 
-    public void Start(bool deposit, bool includePremium)
+    public void Start(bool deposit, bool includePremium, bool onlyMaterials)
     {
         if (!IsBusy)
-            startRequest = new(deposit, includePremium);
+            startRequest = new(deposit, includePremium, onlyMaterials);
     }
 
     public void RequestStop() => stopRequested = true;
@@ -95,7 +97,14 @@ internal sealed unsafe class Transfer(IGameGui gameGui, IClientState clientState
             }
 
             var itemSheet = data.GetExcelSheet<Item>();
-            var stackLimit = itemSheet.TryGetRow(stack.ItemId, out var item) ? (int)item.StackSize : 1;
+            var hasItem = itemSheet.TryGetRow(stack.ItemId, out var item);
+            if (materialsOnly && (!hasItem || item.ItemUICategory.ValueNullable?.OrderMajor != MaterialsOrderGroup))
+            {
+                sourceSlots.Dequeue();
+                continue;
+            }
+
+            var stackLimit = hasItem ? (int)item.StackSize : 1;
             if (!FindDestination(stack, stackLimit, out var target, out var targetStack))
             {
                 SkipSource();
@@ -108,7 +117,8 @@ internal sealed unsafe class Transfer(IGameGui gameGui, IClientState clientState
             return;
         }
 
-        Finish($"Transfer finished. {remaining} occupied source slot(s) remain.");
+        var remainingQualifier = materialsOnly ? "material" : "occupied";
+        Finish($"Transfer finished. {remaining} {remainingQualifier} source slot(s) remain.");
     }
 
     private void Initialize(StartRequest request)
@@ -144,6 +154,7 @@ internal sealed unsafe class Transfer(IGameGui gameGui, IClientState clientState
         }
 
         moved = remaining = 0;
+        materialsOnly = request.OnlyMaterials;
         stopRequested = false;
         pending = null;
         IsRunning = true;
@@ -264,7 +275,7 @@ internal sealed unsafe class Transfer(IGameGui gameGui, IClientState clientState
             ? default
             : new Stack(item->GetBaseItemId(), item->Quantity, item->Flags, item->IsCollectable());
 
-    private readonly record struct StartRequest(bool Deposit, bool IncludePremium);
+    private readonly record struct StartRequest(bool Deposit, bool IncludePremium, bool OnlyMaterials);
     private readonly record struct Slot(InventoryType Container, ushort Index);
     private readonly record struct Stack(uint ItemId, int Quantity, InventoryItem.ItemFlags Flags, bool Collectable)
     {

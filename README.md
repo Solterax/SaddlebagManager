@@ -13,6 +13,8 @@ In `/xlsettings`, add the [Solterax plugin feed](https://raw.githubusercontent.c
 
 Hover over either button for the keyboard shortcut and transfer status. Use `/saddlebagmanager` to enable **Include premium saddlebag** or access **Stop transfer**.
 
+Tick **Materials only** to limit either direction to items in the game's Materials category. You can also set the checkbox in `/saddlebagmanager`.
+
 The plugin uses compatible stacks and empty slots in the destination. Items that cannot fit or that the game refuses to move stay in their original slots. **Stop transfer** finishes checking the current move before stopping. Closing the saddlebag also stops the transfer.
 
 ## Build
