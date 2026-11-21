@@ -76,11 +76,10 @@ internal sealed unsafe class SaddlebagFooter(Transfer transfer)
 
             ImGui.SetWindowFontScale(1f);
             ImGui.SetWindowFontScale(13f * scale / ImGui.GetFontSize());
-            ImGui.BeginDisabled(transfer.IsBusy);
-            DrawButton(true, includePremium, scale);
+            var activeDeposit = transfer.ActiveDeposit;
+            DrawButton(true, includePremium, scale, activeDeposit);
             ImGui.SameLine();
-            DrawButton(false, includePremium, scale);
-            ImGui.EndDisabled();
+            DrawButton(false, includePremium, scale, activeDeposit);
         }
         finally
         {
@@ -90,18 +89,29 @@ internal sealed unsafe class SaddlebagFooter(Transfer transfer)
         }
     }
 
-    private void DrawButton(bool deposit, bool includePremium, float scale)
+    private void DrawButton(bool deposit, bool includePremium, float scale, bool? activeDeposit)
     {
         var label = deposit ? "Deposit All" : "Withdraw All";
         var width = deposit ? DepositWidth : WithdrawWidth;
-        if (ImGui.Button(label, new Vector2(width, ButtonHeight) * scale) && ImGui.GetIO().KeyCtrl)
-            transfer.Start(deposit, includePremium);
+        var isStop = activeDeposit == deposit;
+        var buttonLabel = isStop ? $"Stop##{label}" : label;
+        ImGui.BeginDisabled(activeDeposit.HasValue && !isStop);
+        if (ImGui.Button(buttonLabel, new Vector2(width, ButtonHeight) * scale))
+        {
+            if (isStop)
+                transfer.RequestStop();
+            else if (ImGui.GetIO().KeyCtrl)
+                transfer.Start(deposit, includePremium);
+        }
 
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
         {
-            var hint = $"Hold Ctrl and click to {label.ToLowerInvariant()}.";
+            var hint = isStop
+                ? "Click to stop after the current move is checked."
+                : $"Hold Ctrl and click to {label.ToLowerInvariant()}.";
             var status = transfer.Status;
             ImGui.SetTooltip(status.Length == 0 ? hint : $"{hint}\n{status}");
         }
+        ImGui.EndDisabled();
     }
 }

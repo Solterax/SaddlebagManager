@@ -22,14 +22,16 @@ internal sealed unsafe class Transfer(IGameGui gameGui, IClientState clientState
     private InventoryType[] destinations = [];
     private Move? pending;
     private StartRequest? startRequest;
+    private bool? runningDeposit;
     private bool stopRequested;
     private int moved;
     private int remaining;
     private int submersibleSlotsSkipped;
 
     public bool SaddlebagReady => GetVisibleSaddlebag() != null;
-    public bool IsRunning { get; private set; }
-    public bool IsBusy => IsRunning || startRequest.HasValue;
+    public bool IsRunning => runningDeposit.HasValue;
+    public bool? ActiveDeposit => runningDeposit ?? startRequest?.Deposit;
+    public bool IsBusy => ActiveDeposit.HasValue;
     public string Status { get; private set; } = "";
 
     public void Start(bool deposit, bool includePremium)
@@ -38,7 +40,18 @@ internal sealed unsafe class Transfer(IGameGui gameGui, IClientState clientState
             startRequest = new(deposit, includePremium);
     }
 
-    public void RequestStop() => stopRequested = true;
+    public void RequestStop()
+    {
+        if (startRequest.HasValue)
+        {
+            startRequest = null;
+            Status = "Transfer stopped.";
+        }
+        else if (IsRunning)
+        {
+            stopRequested = true;
+        }
+    }
 
     internal AtkUnitBase* GetVisibleSaddlebag()
     {
@@ -158,7 +171,7 @@ internal sealed unsafe class Transfer(IGameGui gameGui, IClientState clientState
         moved = remaining = submersibleSlotsSkipped = 0;
         stopRequested = false;
         pending = null;
-        IsRunning = true;
+        runningDeposit = request.Deposit;
         Status = "Transferring items…";
     }
 
@@ -248,7 +261,7 @@ internal sealed unsafe class Transfer(IGameGui gameGui, IClientState clientState
     {
         pending = null;
         sourceSlots.Clear();
-        IsRunning = false;
+        runningDeposit = null;
         Status = $"{message} Moved {moved} item(s).";
         if (submersibleSlotsSkipped > 0)
             Status += $" Skipped {submersibleSlotsSkipped} slot(s) with submersible parts.";

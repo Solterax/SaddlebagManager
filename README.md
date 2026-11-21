@@ -11,7 +11,7 @@ In `/xlsettings`, add the [Solterax plugin feed](https://raw.githubusercontent.c
 1. Open the Chocobo Saddlebag with `/saddlebag`.
 2. Hold **Ctrl** and click **Deposit All** or **Withdraw All** in the saddlebag footer to start the transfer.
 
-Hover over either button for the keyboard shortcut and transfer status. Use `/saddlebagmanager` to enable **Include premium saddlebag** or access **Stop transfer**.
+Hover over either button for the keyboard shortcut and transfer status. The active button becomes **Stop** during the transfer. Click it to stop after the current move is checked. Use `/saddlebagmanager` to enable **Include premium saddlebag**.
 
 Bulk transfers skip submersible hulls, sterns, bows, and bridges in both directions.
 
