@@ -16,7 +16,6 @@ public sealed class Plugin : IDalamudPlugin
     private readonly SaddlebagFooter footer;
     private bool windowOpen;
     private bool includePremium;
-    private bool materialsOnly;
     private bool? confirmDeposit;
 
     public Plugin(IDalamudPluginInterface pluginInterface, ICommandManager commands, IFramework framework,
@@ -49,11 +48,11 @@ public sealed class Plugin : IDalamudPlugin
 
     private void Draw()
     {
-        footer.Draw(includePremium, ref materialsOnly);
+        footer.Draw(includePremium);
         if (!windowOpen)
             return;
 
-            ImGui.SetNextWindowSize(new Vector2(420, 195), ImGuiCond.FirstUseEver);
+        ImGui.SetNextWindowSize(new Vector2(420, 170), ImGuiCond.FirstUseEver);
         var visible = ImGui.Begin("Saddlebag Manager", ref windowOpen, ImGuiWindowFlags.NoCollapse);
         try
         {
@@ -78,7 +77,6 @@ public sealed class Plugin : IDalamudPlugin
             {
                 ImGui.BeginDisabled(!ready);
                 ImGui.Checkbox("Include premium saddlebag", ref includePremium);
-                ImGui.Checkbox("Materials only", ref materialsOnly);
                 if (confirmDeposit is bool deposit)
                 {
                     ImGui.TextUnformatted(deposit
@@ -86,7 +84,7 @@ public sealed class Plugin : IDalamudPlugin
                         : "Move items from the saddlebag to inventory?");
                     if (ImGui.Button("Start transfer"))
                     {
-                        transfer.Start(deposit, includePremium, materialsOnly);
+                        transfer.Start(deposit, includePremium);
                         confirmDeposit = null;
                     }
                     ImGui.SameLine();

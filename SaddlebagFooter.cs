@@ -13,14 +13,13 @@ internal sealed unsafe class SaddlebagFooter(Transfer transfer)
     private const float ButtonHeight = 21f;
     private const float ButtonGap = 5f;
     private const float RowWidth = DepositWidth + ButtonGap + WithdrawWidth;
-    private const float FilterWidth = 118f;
 
     private const ImGuiWindowFlags WindowFlags =
         ImGuiWindowFlags.NoDecoration | ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoMove |
         ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.NoFocusOnAppearing | ImGuiWindowFlags.NoNav |
         ImGuiWindowFlags.NoBringToFrontOnFocus;
 
-    public void Draw(bool includePremium, ref bool materialsOnly)
+    public void Draw(bool includePremium)
     {
         var addon = transfer.GetVisibleSaddlebag();
         if (addon == null || addon->RootNode == null || !addon->RootNode->IsVisible())
@@ -32,6 +31,7 @@ internal sealed unsafe class SaddlebagFooter(Transfer transfer)
 
         Bounds window = default;
         addon->GetRootBounds(&window);
+        var rowSize = new Vector2(RowWidth, ButtonHeight) * scale;
 
         // Leave space at the right for Pandora's Entrust Duplicates overlay.
         var right = window.Pos2.X - (136f + ButtonGap) * scale;
@@ -52,8 +52,6 @@ internal sealed unsafe class SaddlebagFooter(Transfer transfer)
             }
         }
 
-        var showFilter = right - (RowWidth + FilterWidth) * scale >= window.Pos1.X;
-        var rowSize = new Vector2(showFilter ? RowWidth + FilterWidth : RowWidth, ButtonHeight) * scale;
         var position = new Vector2(right - rowSize.X, top);
         if (position.X < window.Pos1.X || position.Y < window.Pos1.Y || top + rowSize.Y > window.Pos2.Y)
             return;
@@ -79,16 +77,9 @@ internal sealed unsafe class SaddlebagFooter(Transfer transfer)
             ImGui.SetWindowFontScale(1f);
             ImGui.SetWindowFontScale(13f * scale / ImGui.GetFontSize());
             ImGui.BeginDisabled(transfer.IsBusy);
-            if (showFilter)
-            {
-                ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(0, 4f * scale));
-                ImGui.Checkbox("Materials only", ref materialsOnly);
-                ImGui.PopStyleVar();
-                ImGui.SameLine(FilterWidth * scale);
-            }
-            DrawButton(true, includePremium, materialsOnly, scale);
+            DrawButton(true, includePremium, scale);
             ImGui.SameLine();
-            DrawButton(false, includePremium, materialsOnly, scale);
+            DrawButton(false, includePremium, scale);
             ImGui.EndDisabled();
         }
         finally
@@ -99,18 +90,16 @@ internal sealed unsafe class SaddlebagFooter(Transfer transfer)
         }
     }
 
-    private void DrawButton(bool deposit, bool includePremium, bool materialsOnly, float scale)
+    private void DrawButton(bool deposit, bool includePremium, float scale)
     {
         var label = deposit ? "Deposit All" : "Withdraw All";
         var width = deposit ? DepositWidth : WithdrawWidth;
         if (ImGui.Button(label, new Vector2(width, ButtonHeight) * scale) && ImGui.GetIO().KeyCtrl)
-            transfer.Start(deposit, includePremium, materialsOnly);
+            transfer.Start(deposit, includePremium);
 
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
         {
-            var verb = deposit ? "deposit" : "withdraw";
-            var items = materialsOnly ? "materials only" : "all";
-            var hint = $"Hold Ctrl and click to {verb} {items}.";
+            var hint = $"Hold Ctrl and click to {label.ToLowerInvariant()}.";
             var status = transfer.Status;
             ImGui.SetTooltip(status.Length == 0 ? hint : $"{hint}\n{status}");
         }

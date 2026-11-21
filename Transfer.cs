@@ -8,7 +8,8 @@ namespace SaddlebagManager;
 
 internal sealed unsafe class Transfer(IGameGui gameGui, IClientState clientState, IDataManager data)
 {
-    private const byte MaterialsOrderGroup = 6;
+    private const uint SubmersibleHullCategory = 101;
+    private const uint SubmersibleBridgeCategory = 104;
     private static readonly InventoryType[] InventoryPages =
         [InventoryType.Inventory1, InventoryType.Inventory2, InventoryType.Inventory3, InventoryType.Inventory4];
     private static readonly InventoryType[] StandardPages = [InventoryType.SaddleBag1, InventoryType.SaddleBag2];
@@ -22,19 +23,19 @@ internal sealed unsafe class Transfer(IGameGui gameGui, IClientState clientState
     private Move? pending;
     private StartRequest? startRequest;
     private bool stopRequested;
-    private bool materialsOnly;
     private int moved;
     private int remaining;
+    private int submersibleSlotsSkipped;
 
     public bool SaddlebagReady => GetVisibleSaddlebag() != null;
     public bool IsRunning { get; private set; }
     public bool IsBusy => IsRunning || startRequest.HasValue;
     public string Status { get; private set; } = "";
 
-    public void Start(bool deposit, bool includePremium, bool onlyMaterials)
+    public void Start(bool deposit, bool includePremium)
     {
         if (!IsBusy)
-            startRequest = new(deposit, includePremium, onlyMaterials);
+            startRequest = new(deposit, includePremium);
     }
 
     public void RequestStop() => stopRequested = true;
@@ -98,9 +99,11 @@ internal sealed unsafe class Transfer(IGameGui gameGui, IClientState clientState
 
             var itemSheet = data.GetExcelSheet<Item>();
             var hasItem = itemSheet.TryGetRow(stack.ItemId, out var item);
-            if (materialsOnly && (!hasItem || item.ItemUICategory.ValueNullable?.OrderMajor != MaterialsOrderGroup))
+            // The contiguous submersible categories cover hull, stern, bow, and bridge.
+            if (hasItem && item.ItemUICategory.RowId is >= SubmersibleHullCategory and <= SubmersibleBridgeCategory)
             {
                 sourceSlots.Dequeue();
+                submersibleSlotsSkipped++;
                 continue;
             }
 
@@ -117,8 +120,7 @@ internal sealed unsafe class Transfer(IGameGui gameGui, IClientState clientState
             return;
         }
 
-        var remainingQualifier = materialsOnly ? "material" : "occupied";
-        Finish($"Transfer finished. {remaining} {remainingQualifier} source slot(s) remain.");
+        Finish($"Transfer finished. {remaining} eligible source slot(s) remain.");
     }
 
     private void Initialize(StartRequest request)
@@ -153,8 +155,7 @@ internal sealed unsafe class Transfer(IGameGui gameGui, IClientState clientState
             }
         }
 
-        moved = remaining = 0;
-        materialsOnly = request.OnlyMaterials;
+        moved = remaining = submersibleSlotsSkipped = 0;
         stopRequested = false;
         pending = null;
         IsRunning = true;
@@ -249,6 +250,8 @@ internal sealed unsafe class Transfer(IGameGui gameGui, IClientState clientState
         sourceSlots.Clear();
         IsRunning = false;
         Status = $"{message} Moved {moved} item(s).";
+        if (submersibleSlotsSkipped > 0)
+            Status += $" Skipped {submersibleSlotsSkipped} slot(s) with submersible parts.";
     }
 
     private static bool IsLoaded(InventoryType type) => GetContainer(type) != null;
@@ -275,7 +278,7 @@ internal sealed unsafe class Transfer(IGameGui gameGui, IClientState clientState
             ? default
             : new Stack(item->GetBaseItemId(), item->Quantity, item->Flags, item->IsCollectable());
 
-    private readonly record struct StartRequest(bool Deposit, bool IncludePremium, bool OnlyMaterials);
+    private readonly record struct StartRequest(bool Deposit, bool IncludePremium);
     private readonly record struct Slot(InventoryType Container, ushort Index);
     private readonly record struct Stack(uint ItemId, int Quantity, InventoryItem.ItemFlags Flags, bool Collectable)
     {
